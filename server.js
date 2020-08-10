@@ -13,7 +13,6 @@ const cookieParser = require("cookie-parser");
 const app = express();
 const http = require("http").Server(app);
 const sessionStore = new session.MemoryStore();
-const io = require("socket.io")(http);
 const cors = require("cors");
 
 app.use(cors());
@@ -36,20 +35,30 @@ app.use(
   })
 );
 
-mongo.connect(process.env.DATABASE, (err, db) => {
-  if (err) console.log("Database error: " + err);
+mongo.connect(
+  process.env.DATABASE,
+  { useUnifiedTopology: true },
+  (err, client) => {
+    if (err) console.log("Database error: " + err);
+    let db = client.db("advancednode");
+    auth(app, db);
+    routes(app, db);
 
-  auth(app, db);
-  routes(app, db);
+    http.listen(process.env.PORT || 3000);
 
-  http.listen(process.env.PORT || 3000);
-
-  //start socket.io code
-  var currentUsers = 0;
-  io.on("connection", socket => {
-    console.log("A user has connected");
-    ++currentUsers;
-    io.emit('user count', currentUsers);
-  });
-  //end socket.io code
-});
+    //start socket.io code
+    const io = require("socket.io")(http);
+    let currentUsers = 0;
+    io.on("connection", socket => {
+      console.log("A user has connected");
+      ++currentUsers;
+      io.emit("user count", currentUsers);
+      socket.on("disconnect", () => {
+        console.log("A user has disconnected");
+        --currentUsers
+        io.emit('user count', currentUsers);
+      });
+    });
+    //end socket.io code
+  }
+);
