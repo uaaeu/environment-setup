@@ -14,6 +14,7 @@ const app = express();
 const http = require("http").Server(app);
 const sessionStore = new session.MemoryStore();
 const cors = require("cors");
+const passportSocketIo = require("passport.socketio")
 
 app.use(cors());
 
@@ -48,14 +49,26 @@ mongo.connect(
 
     //start socket.io code
     const io = require("socket.io")(http);
+    
+    io.use(passportSocketIo.authorize({
+      cookieParser: cookieParser,
+      key: 'express.sid',
+      secret: process.env.SESSION_SECRET,
+      store: sessionStore
+    }));
+    
     let currentUsers = 0;
+    
     io.on("connection", socket => {
-      console.log("A user has connected");
+      console.log(socket.request.user.name + " has connected");
       ++currentUsers;
+      
       io.emit("user count", currentUsers);
+      
       socket.on("disconnect", () => {
         console.log("A user has disconnected");
         --currentUsers
+     
         io.emit('user count', currentUsers);
       });
     });
