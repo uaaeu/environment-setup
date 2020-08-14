@@ -63,13 +63,13 @@ mongo.connect(
       console.log(socket.request.user.name + " has connected");
       ++currentUsers;
       
-      io.emit("user count", currentUsers);
+      io.emit("user", {name: socket.request.user.name, currentUsers, connected: true});
       
       socket.on("disconnect", () => {
-        console.log("A user has disconnected");
+        console.log(socket.request.user.name + " has disconnected");
         --currentUsers
      
-        io.emit('user count', currentUsers);
+        io.emit('user', {name: socket.request.user.name, currentUsers, connected: false});
       });
     });
     //end socket.io code
